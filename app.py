@@ -35,30 +35,47 @@ st.markdown("""
 .block-container { padding-top: 0.8rem; }
 
 .header {
-  background: #1fb6a6;
-  padding: 16px 24px;
+  background: #0f172a;
+  padding: 18px 28px;
   border-radius: 14px;
   color: white;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .header h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
 }
 
 .panel {
-  background: white;
-  border-radius: 14px;
+  background: #0b1220;
+  color: #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid #1f2933;
+}
+
+.metric-card {
+  background: #020617;
+  border-radius: 16px;
   padding: 20px;
-  border: 1px solid #e5e7eb;
+  text-align: left;
+  border: 1px solid #1f2933;
 }
 
-.overview-text h2 {
-  margin-top: 0;
+.metric-card h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #9ca3af;
 }
 
+.metric-card p {
+  margin: 6px 0 0 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: white;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -77,17 +94,17 @@ years = sorted(df_state["year"].unique())
 # =====================================================
 st.markdown("""
 <div class="header">
-  <h1>Tennessee Statewide Litter, Recycling & Dump Sites</h1>
+  <h1>🧹 Tennessee Statewide Litter, Recycling & Dump Sites</h1>
 </div>
 """, unsafe_allow_html=True)
 
 # =====================================================
 # GLOBAL CONTROLS
 # =====================================================
-c1, c2 = st.columns([1.3, 1])
+c1, c2 = st.columns([1.2, 1])
 
 with c1:
-    year = st.selectbox("Select Year", years, index=len(years)-1)
+    year = st.selectbox("Select Fiscal Year", years, index=len(years)-1)
 
 with c2:
     metric = st.radio(
@@ -104,41 +121,45 @@ tab_overview, tab_trends, tab_compare, tab_summary = st.tabs(
 )
 
 # =====================================================
-# TAB 1 — OVERVIEW (COUNTY MAP HERO)
+# TAB 1 — OVERVIEW
 # =====================================================
 with tab_overview:
     left, right = st.columns([1, 2.3], gap="large")
 
-    # ---- LEFT TEXT (like ArcGIS reference)
+    # ---------- LEFT TEXT ----------
     with left:
-        st.markdown('<div class="panel overview-text">', unsafe_allow_html=True)
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
         st.markdown("## Overview")
         st.write("""
-This dashboard provides a statewide view of litter collection,
+This dashboard provides a **statewide view** of litter collection,
 recycling efforts, and dump site activity across Tennessee.
 
 The **county map** is the primary overview, allowing users to visually
-identify spatial patterns and regional differences for the selected year.
+identify spatial patterns and regional differences for the **selected year**.
 """)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---- RIGHT MAP (BIG, CLEAN)
+    # ---------- RIGHT MAP ----------
     with right:
         d = df_map[df_map["year"] == year].copy()
-        values = d[metric]
 
-        # Stable bins (ArcGIS-like)
-        max_val = values.max()
-        bins = [0, 0.2*max_val, 0.4*max_val, 0.6*max_val, 0.8*max_val, max_val]
+        max_val = d[metric].max()
+        bins = [0, .2*max_val, .4*max_val, .6*max_val, .8*max_val, max_val]
         labels = ["Very Low", "Low", "Medium", "High", "Very High"]
-        d["Intensity"] = pd.cut(values, bins=bins, labels=labels, include_lowest=True)
+
+        d["Intensity"] = pd.cut(
+            d[metric],
+            bins=bins,
+            labels=labels,
+            include_lowest=True
+        )
 
         palette = (
-            ["#fff5eb", "#fdd0a2", "#fdae6b", "#e6550d", "#a63603"]
+            ["#fff5eb", "#fdd0a2", "#fdae6b", "#e6550d", "#7f2704"]
             if metric == "litter" else
-            ["#edf8e9", "#bae4b3", "#74c476", "#31a354", "#006d2c"]
+            ["#edf8e9", "#bae4b3", "#74c476", "#31a354", "#005a32"]
             if metric == "recycled" else
-            ["#eff3ff", "#bdd7e7", "#6baed6", "#3182bd", "#08519c"]
+            ["#eff3ff", "#bdd7e7", "#6baed6", "#3182bd", "#08306b"]
         )
 
         fig_map = px.choropleth_mapbox(
@@ -160,12 +181,11 @@ identify spatial patterns and regional differences for the selected year.
         )
 
         fig_map.update_layout(
-            height=650,
+            height=520,
             margin=dict(l=0, r=0, t=0, b=0),
             legend=dict(
                 title="Intensity",
-                bgcolor="rgba(255,255,255,0.8)",
-                bordercolor="#d1d5db",
+                bgcolor="rgba(255,255,255,0.9)",
                 borderwidth=1,
                 x=0.98,
                 y=0.02,
@@ -176,12 +196,59 @@ identify spatial patterns and regional differences for the selected year.
 
         st.plotly_chart(fig_map, use_container_width=True)
 
+    # =================================================
+    # KEY METRICS — UNDER MAP (SAME TAB)
+    # =================================================
+    st.markdown("### Key Metrics")
+
+    row = df_state[df_state["year"] == year].iloc[0]
+
+    def fmt(x):
+        if x >= 1_000_000:
+            return f"{x/1_000_000:.1f}M"
+        if x >= 1_000:
+            return f"{x/1_000:.1f}K"
+        return str(int(x))
+
+    k1, k2, k3, k4 = st.columns(4)
+
+    with k1:
+        st.markdown(f"""
+        <div class="metric-card">
+          <h3>Total Litter (lbs)</h3>
+          <p>{fmt(row["litter"])}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with k2:
+        st.markdown(f"""
+        <div class="metric-card">
+          <h3>Recycled (lbs)</h3>
+          <p>{fmt(row["recycled"])}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with k3:
+        st.markdown(f"""
+        <div class="metric-card">
+          <h3>Dump Sites</h3>
+          <p>{fmt(row["dumps"])}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with k4:
+        st.markdown(f"""
+        <div class="metric-card">
+          <h3>Partners</h3>
+          <p>{fmt(row["partners"])}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 # =====================================================
 # TAB 2 — TRENDS
 # =====================================================
 with tab_trends:
     st.markdown("## Statewide Trends Over Time")
-
     fig = px.line(
         df_state.sort_values("year"),
         x="year",
@@ -196,38 +263,17 @@ with tab_trends:
 # =====================================================
 with tab_compare:
     st.markdown("## County Comparison")
-
     top = (
         df_map[df_map["year"] == year]
         .sort_values(metric, ascending=False)
         .head(10)
     )
-
-    fig = px.bar(
-        top,
-        x="county",
-        y=metric,
-        title=f"Top 10 Counties by {metric.title()}",
-    )
+    fig = px.bar(top, x="county", y=metric)
     st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
-# TAB 4 — SUMMARY / KPIs
+# TAB 4 — SUMMARY
 # =====================================================
 with tab_summary:
-    st.markdown("## Key Metrics")
-
-    row = df_state[df_state["year"] == year].iloc[0]
-    k1, k2, k3, k4 = st.columns(4)
-
-    def fmt(x):
-        if x >= 1_000_000:
-            return f"{x/1_000_000:.1f}M"
-        if x >= 1_000:
-            return f"{x/1_000:.1f}K"
-        return f"{int(x)}"
-
-    k1.metric("Total Litter (lbs)", fmt(row["litter"]))
-    k2.metric("Recycled (lbs)", fmt(row["recycled"]))
-    k3.metric("Dump Sites", fmt(row["dumps"]))
-    k4.metric("Partners", fmt(row["partners"]))
+    st.markdown("## Summary")
+    st.write("High-level snapshot of statewide litter, recycling, and dump site activity.")
