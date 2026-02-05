@@ -22,9 +22,9 @@ st.set_page_config(
 BASE = Path(__file__).parent
 DATA = BASE / "data"
 
-STATE_FILE = DATA / "state_year_kpis.csv"
-MAP_FILE = DATA / "TN_Litter_Map_County_Year.csv"
-GEOJSON_FILE = DATA / "tn_counties.geojson"
+STATE_FILE = BASE / "state_year_kpis.csv"
+MAP_FILE = BASE / "TN_Litter_Map_County_Year.csv"
+GEOJSON_FILE = BASE / "tn_counties.geojson"
 GEOJSON_KEY = "NAME"
 
 # =====================================================
